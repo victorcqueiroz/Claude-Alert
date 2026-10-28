@@ -53,6 +53,8 @@ internal static class L
         "Autorização necessária" => T("StatusPermission"), "Claude fez uma pergunta" => T("StatusQuestion"),
         "Plano aguardando aprovação" => T("StatusPlan"), "Resposta concluída" => T("StatusDone"),
         "Claude interrompido por erro" => T("StatusError"), "Resposta necessária" => T("StatusResponse"),
+        "RequestAnswered" => T("RequestAnswered"), "SessionClosed" => T("SessionClosed"),
+        "StatusUnconfirmed" => T("StatusUnconfirmed"),
         _ => status
     };
 }

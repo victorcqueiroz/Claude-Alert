@@ -16,7 +16,7 @@
                     <TextBlock x:Name="AlertTitle" Grid.Row="1" Text="{DynamicResource Loc.StatusPermission}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,6,0,0" />
                     <TextBlock x:Name="ProjectLabel" Grid.Row="2" Style="{StaticResource SecondaryText}" TextTrimming="CharacterEllipsis" Margin="0,3,0,0" />
                     <DockPanel Grid.Row="3" VerticalAlignment="Bottom">
-                        <Button Content="{DynamicResource Loc.AcknowledgeShort}" Style="{StaticResource QuietButton}" DockPanel.Dock="Right" FontSize="12" Padding="8,3" MinHeight="30" Click="Acknowledge_Click" />
+                        <Button x:Name="DeferToastButton" Content="{DynamicResource Loc.DeferShort}" Style="{StaticResource QuietButton}" DockPanel.Dock="Right" FontSize="12" Padding="8,3" MinHeight="30" Click="Acknowledge_Click" />
                         <Button x:Name="ToastOpenButton" Style="{StaticResource LinkButton}" HorizontalAlignment="Left" Click="Open_Click" AutomationProperties.Name="{DynamicResource Loc.OpenCode}"><StackPanel Orientation="Horizontal"><TextBlock Text="{DynamicResource Loc.OpenCode}" Foreground="{DynamicResource Accent}" FontSize="12" /><TextBlock Style="{StaticResource Glyph}" Text="&#xE8A7;" FontSize="12" Margin="8,0,0,0" /></StackPanel></Button>
                     </DockPanel>
                 </Grid>

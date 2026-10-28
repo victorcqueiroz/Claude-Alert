@@ -11,11 +11,12 @@ public partial class AlertCard : Window
     readonly Stopwatch elapsed = new();
     readonly Action open, acknowledge;
     readonly SessionState session;
+    readonly string? projectAlias;
     internal string SessionId { get; }
-    internal AlertCard(SessionState session, Action open, Action acknowledge, Action snooze)
+    internal AlertCard(SessionState session, Action open, Action acknowledge, Action snooze, string? projectAlias = null)
     {
         InitializeComponent(); UiTheme.ApplyAccessibility(Resources);
-        this.session = session; SessionId = session.Id; this.open = open; this.acknowledge = acknowledge;
+        this.session = session; this.projectAlias = projectAlias; SessionId = session.Id; this.open = open; this.acknowledge = acknowledge;
         RefreshLanguage();
         var context = new System.Windows.Controls.ContextMenu();
         var silence = new System.Windows.Controls.MenuItem();
@@ -43,8 +44,9 @@ public partial class AlertCard : Window
     {
         Language = System.Windows.Markup.XmlLanguage.GetLanguage(L.Current);
         AlertTitle.Text = L.Status(session.Status); AlertTitle.ToolTip = AlertTitle.Text;
-        string project = SessionId == "demo" ? L.T("ExampleProject") : L.Project(session);
-        ProjectLabel.Text = project + " · Claude Code"; ProjectLabel.ToolTip = project;
+        string project = SessionId == "demo" ? L.T("ExampleProject") : projectAlias ?? L.Project(session);
+        ProjectLabel.Text = project + " · " + L.F("SessionLabel", SessionId[..Math.Min(8, SessionId.Length)]); ProjectLabel.ToolTip = project;
+        DeferToastButton.Visibility = session.Status is "Resposta concluída" or "Claude interrompido por erro" || SessionId == "demo" ? Visibility.Collapsed : Visibility.Visible;
         Countdown.Text = L.F("Seconds", Math.Max(1, Math.Ceiling(3 - elapsed.Elapsed.TotalSeconds)));
     }
     void Open_Click(object sender, RoutedEventArgs e) => open();

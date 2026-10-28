@@ -44,68 +44,6 @@ internal sealed record Signal(string Session, string Folder, string Event, strin
     }
 }
 
-internal sealed class SessionState(string id)
-{
-    internal string Id = id;
-    internal string Folder = "";
-    internal string Status = "Conectado";
-    internal string PendingTool = "";
-    internal string PendingId = "";
-    internal bool Pending;
-    internal bool Acknowledged;
-    internal DateTimeOffset Last;
-    internal DateTimeOffset LastAlert;
-    internal string Project => string.IsNullOrEmpty(Folder) ? "Sessão Claude" :
-        Path.GetFileName(Folder.TrimEnd('/', '\\'));
-}
-
-internal sealed class MonitorState
-{
-    internal readonly Dictionary<string, SessionState> Sessions = [];
-    // Returns true only for a new actionable state, never for unrelated notifications.
-    internal bool Apply(Signal e)
-    {
-        if (e.Event == "SessionEnd") { Sessions.Remove(e.Session); return false; }
-        if (!Sessions.TryGetValue(e.Session, out var s)) Sessions[e.Session] = s = new(e.Session);
-        if (e.At < s.Last) return false;
-        s.Last = e.At;
-        if (!string.IsNullOrEmpty(e.Folder)) s.Folder = e.Folder;
-        string? alert = e.Event switch
-        {
-            "PermissionRequest" => "Autorização necessária",
-            "PreToolUse" when e.Tool is "AskUserQuestion" or "ExitPlanMode" =>
-                e.Tool == "AskUserQuestion" ? "Claude fez uma pergunta" : "Plano aguardando aprovação",
-            "Stop" => "Resposta concluída",
-            "StopFailure" => "Claude interrompido por erro",
-            "Notification" => e.Notification switch
-            {
-                "permission_prompt" => "Autorização necessária",
-                "idle_prompt" => "Resposta concluída",
-                "elicitation_dialog" or "elicitation_url_dialog" or "agent_needs_input" => "Resposta necessária",
-                _ => null
-            },
-            _ => null
-        };
-        if (alert != null)
-        {
-            if (s.Pending && s.Status == alert) return false;
-            s.Status = alert; s.Pending = true; s.Acknowledged = false;
-            s.PendingTool = e.Tool; s.PendingId = e.ToolId;
-            return true;
-        }
-        bool toolFinished = e.Event is "PostToolUse" or "PostToolUseFailure";
-        bool matching = s.PendingId.Length > 0 ? s.PendingId == e.ToolId :
-            s.PendingTool.Length > 0 && s.PendingTool == e.Tool;
-        if (e.Event == "UserPromptSubmit" || (toolFinished && (!s.Pending || matching)) ||
-            (e.Event == "PreToolUse" && !s.Pending))
-        {
-            s.Status = "Trabalhando"; s.Pending = false; s.Acknowledged = false;
-            s.PendingId = ""; s.PendingTool = "";
-        }
-        return false;
-    }
-}
-
 internal static class HookInstaller
 {
     internal const string Marker = "--claude-alert-hook";

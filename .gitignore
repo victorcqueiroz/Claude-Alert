@@ -10,6 +10,7 @@ artifacts/
 .env.*
 .credentials.json
 preferences.json
+activity.json
 *.user
 *.suo
 *.log

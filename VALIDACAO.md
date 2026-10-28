@@ -1,4 +1,19 @@
-# Validação — 27/10/2026
+# Validação — 28/10/2026
+
+## Versão 1.3.0 — Atenção, Ritmo e Projetos
+
+- Publicação Windows x64 com runtime incluído concluída, sem erros nem avisos na compilação final. A restauração oficial do NuGet foi concluída; não foram adicionados pacotes de terceiros.
+- **76 verificações do monitor e dos catálogos** aprovadas. Cobrem solicitações paralelas, resultados ambíguos, confirmação por ID, deduplicação persistente, eventos atrasados, adiamentos, expiração de 24 horas, restauração, recuperação de arquivos inválidos e preservação do período do resumo ao alternar perfis.
+- O executável foi iniciado em modo hook com JSON fictício pelo stdin: encerrou com código zero e sem saída de decisão; a fila recebeu somente metadados e descartou comandos e transcrições do teste. Um mutex de diagnóstico impediu a abertura automática do monitor durante esse teste isolado.
+- A política de avisos foi verificada com relógio controlado: intervalos progressivos de 2, 5 e 15 minutos; limite de três lembretes; adiamento explícito com repetições desativadas; perfil Silencioso; retomada programada e regras independentes por projeto.
+- Preferências anteriores conservam idioma, som, popup e intervalo. Apelidos, projetos fixados e prazo de retorno sobrevivem à reabertura. Os seis catálogos têm chaves completas e parâmetros de mensagens compatíveis.
+- **94 verificações da interface WPF** aprovadas. Incluem fila e recentes, adiamento pela interface, perguntas paralelas, perfis, resumo, apelidos, fixação, silêncio individual, diagnóstico, bandeja e recuperação dos dados.
+- As três abas foram renderizadas em todos os seis idiomas. O seletor, as ações essenciais e os botões foram conferidos dentro da janela mínima de 900 × 740 unidades lógicas. Conteúdo extenso em Ritmo e Projetos usa rolagem vertical.
+- O aviso permaneceu sem solicitar ativação, sem item na barra de tarefas e com recolhimento automático em cerca de **3,07 segundos**. A troca de idioma durante sua exibição não reiniciou o prazo. Um resultado correspondente fechou um aviso pendente antes do prazo.
+- O retorno automático foi verificado durante a execução e na abertura após o prazo vencer com o aplicativo fechado. O perfil Normal restaurado foi salvo no disco.
+- Resultados: `artifacts/tests/b45f9267072d42ad943b4b86c015cbb5/core/results.json` e `ui/results.json`. Capturas aprovadas de demonstração estão em `docs/images/`; demais evidências isoladas não são versionadas.
+
+Esses testes exercitam o monitor, o produtor real de hooks e a interface com eventos fictícios. Não comprovam o funcionamento de cada instalação do Claude, a seleção de uma conversa específica do VS Code, som audível, leitura por todos os leitores de tela, sobreposição a jogos ou todas as combinações de monitores/escalas. O diagnóstico de arquivos não substitui a chegada de um evento real do Claude.
 
 ## Versão 1.2.0 — seleção de idiomas
 

@@ -16,6 +16,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish terminou com código $LASTEXITCODE." }
     Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination (Join-Path $publishFolder 'LEIA-ME.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'VALIDACAO.md') -Destination $publishFolder
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'CHANGELOG.md') -Destination $publishFolder
     Copy-Item -LiteralPath (Join-Path $projectRoot 'docs') -Destination $publishFolder -Recurse -Force
     Write-Host "Publicação concluída: $publishFolder"
 }
