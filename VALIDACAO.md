@@ -1,5 +1,12 @@
 # Validação — 28/10/2026
 
+## Manutenção local — retenção de releases
+
+- O empacotamento passa a chamar `scripts/clean-releases.ps1` após gerar o ZIP atual e conferir seu SHA-256. Nenhum binário do aplicativo ou formato de dados foi alterado; a release do aplicativo permanece 1.4.0.
+- **14 verificações de retenção** aprovadas em pastas isoladas por `scripts/test-cleanup.ps1`: checksum inválido impede exclusões; WhatIf não altera arquivos; apenas pacotes e executáveis antigos reconhecidos são removidos; instalação atual, versões mais novas, pastas desconhecidas e outros projetos são preservados; execução repetida é idempotente; empacotamento aciona a retenção e produz checksum válido.
+- A limpeza desta máquina removeu oito diretórios de distribuições anteriores do Claude Alert, além de `bin` e `obj` antigos. Aproximadamente 1,2 GB lógicos de arquivos foram removidos. Instalação e pacote 1.4.0 foram mantidos; configurações pessoais e CasaCameras ficaram fora dos alvos.
+- Evidência dos testes de retenção: `artifacts/cleanup-test-results.json`. Relação das distribuições removidas: `artifacts/removed-old-releases.json`. Esses registros locais não são versionados.
+
 ## Versão 1.4.0 — navegação e perfis aprovados
 
 - Publicação Windows x64 com runtime incluído concluída, sem erros nem avisos. Nenhum pacote de terceiros foi adicionado.

@@ -25,5 +25,6 @@ $zip = Join-Path $outputFolder "ClaudeAlert-$version-win-x64.zip"
 Compress-Archive -Path (Join-Path $publishFolder '*') -DestinationPath $zip -CompressionLevel Optimal -Force
 $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 [System.IO.File]::WriteAllText((Join-Path $outputFolder 'SHA256SUMS.txt'), "$hash  $([System.IO.Path]::GetFileName($zip))`n", [System.Text.Encoding]::ASCII)
+& (Join-Path $PSScriptRoot 'clean-releases.ps1') -Version $version
 Write-Host "Pacote: $zip"
 Write-Host "SHA-256: $hash"

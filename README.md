@@ -173,6 +173,21 @@ cd Claude-Alert
 
 A publicação fica em `artifacts/publish/win-x64/`; o ZIP e seu SHA-256 ficam em `artifacts/releases/1.4.0/`. Para usar outro SDK local, informe `-Dotnet C:\caminho\dotnet.exe` aos scripts de compilação, teste ou empacotamento.
 
+### Manter somente a última release local
+
+O empacotamento conserva apenas o pacote da versão atual em `artifacts/releases/`. ZIPs de versões anteriores são removidos somente depois que o novo pacote e seu SHA-256 estiverem disponíveis e conferidos. Pastas com versões mais novas ou conteúdo não reconhecido são preservadas.
+
+Para limpar também distribuições antigas em `release/` e `artifacts/` de uma pasta de trabalho já existente:
+
+```powershell
+.\scripts\clean-releases.ps1 -LegacyRoot 'C:\caminho\da\pasta-de-trabalho' -WhatIf
+.\scripts\clean-releases.ps1 -LegacyRoot 'C:\caminho\da\pasta-de-trabalho'
+```
+
+A limpeza exige um pacote atual válido. Ela só remove pastas antigas identificadas como Claude Alert, confere os caminhos e rejeita links/junções. A instalação sem sufixo `release/ClaudeAlerta`, os dados pessoais, outros projetos e o histórico no GitHub são preservados. Atualizações locais devem substituir a pasta única da instalação e descartar os binários antigos após a validação, sem manter backups de releases anteriores.
+
+Depois de compilar, execute `scripts/test-cleanup.ps1` para testar essa retenção em pastas isoladas, incluindo a preservação de outros projetos e a integração com o empacotamento.
+
 Sem o script:
 
 ```powershell
