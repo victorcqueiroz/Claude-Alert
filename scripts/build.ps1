@@ -18,6 +18,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'VALIDACAO.md') -Destination $publishFolder
     Copy-Item -LiteralPath (Join-Path $projectRoot 'CHANGELOG.md') -Destination $publishFolder
     Copy-Item -LiteralPath (Join-Path $projectRoot 'docs') -Destination $publishFolder -Recurse -Force
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'design') -Destination $publishFolder -Recurse -Force
     Write-Host "Publicação concluída: $publishFolder"
 }
 finally {

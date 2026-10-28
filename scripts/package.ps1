@@ -18,6 +18,7 @@ foreach ($file in @('README.md', 'VALIDACAO.md', 'CHANGELOG.md')) {
 }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination (Join-Path $publishFolder 'LEIA-ME.md') -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs') -Destination $publishFolder -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $projectRoot 'design') -Destination $publishFolder -Recurse -Force
 $outputFolder = Join-Path $projectRoot "artifacts\releases\$version"
 New-Item -ItemType Directory -Path $outputFolder -Force | Out-Null
 $zip = Join-Path $outputFolder "ClaudeAlert-$version-win-x64.zip"
