@@ -1,5 +1,16 @@
 # Validação — 27/10/2026
 
+## Versão 1.2.0 — seleção de idiomas
+
+- Compilação e publicação Windows x64 concluídas, sem erros de compilação. A consulta NuGet continua emitindo NU1900 por indisponibilidade de rede; não foram adicionados pacotes.
+- **35 verificações do monitor e dos catálogos** aprovadas: estados, preservação dos hooks, compatibilidade com preferências antigas, normalização do idioma, seis catálogos completos e parâmetros de mensagens consistentes.
+- **69 verificações da interface** aprovadas, incluindo os seis idiomas: troca imediata do painel, nome nativo no seletor, menu da bandeja, opções de lembrete, status das sessões, persistência sem alteração das outras opções, controles na janela mínima e aviso traduzido.
+- O idioma francês foi salvo e restaurado em uma nova instância da janela com os mesmos dados isolados, confirmando a recuperação da escolha na abertura.
+- Um aviso aberto em inglês foi alterado para alemão sem reiniciar sua duração. O fechamento ocorreu em aproximadamente **3,04 segundos** após a abertura.
+- As capturas `idioma-pt-BR.png`, `idioma-en.png`, `idioma-es.png`, `idioma-de.png`, `idioma-fr.png` e `idioma-zh-Hans.png` foram geradas e inspecionadas. Os caracteres chineses foram renderizados com as fontes de sistema.
+- Resultados desta execução: `artifacts/tests/d8f242572da947948386a1e67077ac9d/core/results.json` e `ui/results.json`. As capturas ficam no subdiretório `ui/` do mesmo resultado e não são versionadas.
+- Português permanece o idioma padrão. Os nomes e caminhos de projetos não são traduzidos; as mudanças de idioma preservam os estados internos do monitor.
+
 ## Versão 1.1.0 — Claro aprovado
 
 - Publicação Windows x64 com runtime próprio concluída, sem erros. A consulta NuGet continua emitindo NU1900 por indisponibilidade de rede; não foram adicionados pacotes de terceiros.

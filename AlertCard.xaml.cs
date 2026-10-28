@@ -10,15 +10,16 @@ public partial class AlertCard : Window
     readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(40) };
     readonly Stopwatch elapsed = new();
     readonly Action open, acknowledge;
+    readonly SessionState session;
     internal string SessionId { get; }
     internal AlertCard(SessionState session, Action open, Action acknowledge, Action snooze)
     {
         InitializeComponent(); UiTheme.ApplyAccessibility(Resources);
-        SessionId = session.Id; this.open = open; this.acknowledge = acknowledge;
-        AlertTitle.Text = session.Status; AlertTitle.ToolTip = session.Status;
-        ProjectLabel.Text = session.Project + " · Claude Code"; ProjectLabel.ToolTip = session.Project;
+        this.session = session; SessionId = session.Id; this.open = open; this.acknowledge = acknowledge;
+        RefreshLanguage();
         var context = new System.Windows.Controls.ContextMenu();
-        var silence = new System.Windows.Controls.MenuItem { Header = "Silenciar por 5 minutos" };
+        var silence = new System.Windows.Controls.MenuItem();
+        silence.SetResourceReference(System.Windows.Controls.MenuItem.HeaderProperty, "Loc.Snooze");
         silence.Click += (_, _) => snooze(); context.Items.Add(silence); ContextMenu = context;
         Loaded += (_, _) =>
         {
@@ -33,10 +34,18 @@ public partial class AlertCard : Window
         {
             double remaining = 3 - elapsed.Elapsed.TotalSeconds;
             if (remaining <= 0) { timer.Stop(); Close(); return; }
-            Countdown.Text = Math.Ceiling(remaining) + " s";
+            Countdown.Text = L.F("Seconds", Math.Ceiling(remaining));
             TimeScale.ScaleX = SystemParameters.ClientAreaAnimation ? remaining / 3 : 1;
         };
         Closed += (_, _) => { timer.Stop(); elapsed.Stop(); };
+    }
+    internal void RefreshLanguage()
+    {
+        Language = System.Windows.Markup.XmlLanguage.GetLanguage(L.Current);
+        AlertTitle.Text = L.Status(session.Status); AlertTitle.ToolTip = AlertTitle.Text;
+        string project = SessionId == "demo" ? L.T("ExampleProject") : L.Project(session);
+        ProjectLabel.Text = project + " · Claude Code"; ProjectLabel.ToolTip = project;
+        Countdown.Text = L.F("Seconds", Math.Max(1, Math.Ceiling(3 - elapsed.Elapsed.TotalSeconds)));
     }
     void Open_Click(object sender, RoutedEventArgs e) => open();
     void Acknowledge_Click(object sender, RoutedEventArgs e) => acknowledge();

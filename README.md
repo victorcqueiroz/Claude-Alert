@@ -4,7 +4,7 @@
 
 O Claude Alert é um aplicativo para **Windows 10/11 x64** que acompanha sessões locais do Claude Code, inclusive as abertas dentro do VS Code. Quando o Claude pede autorização, faz uma pergunta ou termina uma resposta, o aplicativo emite um som opcional e mostra um aviso por **três segundos**. O aviso se recolhe sozinho, sem exigir um clique nem tomar o foco da digitação.
 
-Na interface, o nome aparece como **Claude Alerta**. A versão atual é a **1.1.0**, com o tema **Claro**: painel branco, ações azuis, sessões com status visível e preferências agrupadas.
+Em português, o nome aparece como **Claude Alerta**. A versão atual é a **1.2.0**, com o tema **Claro** e seleção de idioma: português, inglês, espanhol, alemão, francês e chinês simplificado.
 
 ![Painel do Claude Alerta com duas sessões de exemplo](docs/images/painel-claro.png)
 
@@ -15,6 +15,7 @@ Na interface, o nome aparece como **Claude Alerta**. A versão atual é a **1.1.
 - Avisa sobre autorizações, perguntas, aprovação de planos, respostas concluídas e interrupções por erro.
 - Exibe um aviso de três segundos com contagem regressiva e botão para voltar ao VS Code.
 - Mantém uma lista das sessões e destaca solicitações que precisam de atenção.
+- Permite trocar o idioma de toda a interface sem reiniciar, incluindo avisos, mensagens e menu da bandeja.
 - Oferece som opcional, pausa dos alertas e silêncio temporário por cinco minutos.
 - Permite lembretes de solicitações pendentes a cada 30, 60 ou 120 segundos, ou desativá-los.
 - Continua funcionando na bandeja ao fechar ou minimizar o painel.
@@ -83,6 +84,23 @@ O fechamento automático do aviso **não** aprova a operação, responde à perg
 
 No ícone da bandeja, escolha **Desativar integração** e depois **Sair**. Apenas sair permite que um próximo evento do Claude inicie o monitor novamente.
 
+### Selecionar idioma
+
+No **canto inferior direito do painel**, ao lado do ícone de globo, abra o seletor de idioma. As opções aparecem com seus nomes nativos:
+
+| Idioma | Opção no seletor |
+| --- | --- |
+| Português | Português |
+| Inglês | English |
+| Espanhol | Español |
+| Alemão | Deutsch |
+| Francês | Français |
+| Chinês simplificado | 简体中文 |
+
+A alteração é imediata e fica salva para a próxima abertura. Ela atualiza o painel, os estados das sessões, as mensagens, os rótulos acessíveis, o aviso e o menu da bandeja. Os nomes dos seus projetos são preservados. Trocar o idioma não responde às solicitações pendentes nem reinicia a duração de um aviso já aberto.
+
+Português continua sendo o padrão, inclusive para preferências salvas por versões anteriores. A seleção de idioma não altera som, lembretes ou a integração com o Claude. As traduções ficam incorporadas ao aplicativo e não usam serviços de tradução na rede.
+
 ## Como funciona
 
 O aplicativo utiliza os [hooks oficiais do Claude Code](https://code.claude.com/docs/en/hooks), em vez de tentar interpretar imagens da tela ou deduzir o estado pelo consumo de CPU.
@@ -150,7 +168,7 @@ Para incluir a verificação da interface, em uma sessão Windows com área de t
 
 Os testes usam armazenamento isolado em `artifacts/tests/`, sem editar as configurações pessoais do Claude. A verificação de interface pode mostrar janelas brevemente e gera imagens do painel e do aviso para inspeção.
 
-A versão 1.1.0 passou em **20 verificações do monitor** e **22 verificações da interface**, incluindo persistência das preferências, pausa, estado vazio, menu de lembretes, tamanho mínimo da janela e recolhimento do aviso em cerca de três segundos. Consulte [VALIDACAO.md](VALIDACAO.md) para o escopo e os limites dessas verificações.
+A versão 1.2.0 passou em **35 verificações do monitor e dos catálogos** e **69 verificações da interface**. Elas incluem persistência das preferências, pausa, estado vazio, menu de lembretes, tamanho mínimo da janela, recolhimento de três segundos, troca de idioma sem reiniciar e recuperação do idioma ao reabrir. Consulte [VALIDACAO.md](VALIDACAO.md) para os resultados e os limites dessas verificações.
 
 Um teste de uso real continua sendo útil: em uma nova conversa, solicite uma operação que exija autorização; confira o aviso, responda no Claude e confirme que a pendência desaparece. Depois confira o aviso ao concluir uma resposta simples.
 
@@ -160,6 +178,8 @@ Um teste de uso real continua sendo útil: em uma nova conversa, solicite uma op
 ClaudeAlerta.csproj       Projeto C# / .NET 10 para Windows
 Program.cs               Inicialização e modo hook
 Core.cs                  Fila, estados das sessões e instalação dos hooks
+Localization.cs          Seleção, fallback e aplicação das traduções
+Locales/                 Catálogos dos seis idiomas incorporados ao aplicativo
 Dashboard.xaml/.cs       Painel principal e monitoramento
 AlertCard.xaml(.cs)       Aviso com recolhimento automático
 ClaroTheme.xaml          Cores e estilos compartilhados

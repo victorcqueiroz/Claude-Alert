@@ -56,6 +56,23 @@ internal static class SelfTest
             safe.Enqueue();
             var queued = Directory.GetFiles(Storage.Inbox, "*.json");
             Check(queued.Length > 0 && JsonSerializer.Deserialize<Signal>(File.ReadAllText(queued[0]))?.Session == "safe", "Fila faz ida e volta com JSON válido");
+            var legacy = JsonSerializer.Deserialize<Preferences>("{\"Sound\":false,\"Popup\":true,\"ReminderSeconds\":30}")!;
+            Check(legacy.Language == L.DefaultLanguage && !legacy.Sound && legacy.Popup && legacy.ReminderSeconds == 30,
+                "Preferências anteriores continuam em português sem perder suas opções");
+            Check(L.Normalize(null) == L.DefaultLanguage && L.Normalize("unsupported") == L.DefaultLanguage && L.Normalize("FR") == "fr",
+                "Idioma inválido usa português e códigos são normalizados");
+            Check(L.Languages.Length == 6 && L.Languages.Select(l => l.Code).Distinct().Count() == 6,
+                "Há seis idiomas distintos disponíveis");
+            var expectedKeys = L.Catalog(L.DefaultLanguage).Keys.Order().ToArray();
+            foreach (var language in L.Languages)
+            {
+                var catalog = L.Catalog(language.Code);
+                Check(catalog.Keys.Order().SequenceEqual(expectedKeys) && catalog.Values.All(value => !string.IsNullOrWhiteSpace(value)),
+                    "Catálogo completo e sem traduções vazias: " + language.Code);
+                Check(catalog.All(entry => System.Text.CompositeFormat.Parse(entry.Value).MinimumArgumentCount ==
+                    System.Text.CompositeFormat.Parse(L.Catalog(L.DefaultLanguage)[entry.Key]).MinimumArgumentCount),
+                    "Parâmetros das mensagens são compatíveis: " + language.Code);
+            }
             File.WriteAllText(output, JsonSerializer.Serialize(new { success = true, checks }, Storage.Json));
             return 0;
         }

@@ -7,12 +7,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>ClaudeAlerta</AssemblyName>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>claude-alerta.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
+    <EmbeddedResource Include="Locales\*.json" LogicalName="ClaudeAlerta.Locales.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

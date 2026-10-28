@@ -13,6 +13,15 @@ namespace ClaudeAlerta;
 
 internal static class UiCheck
 {
+    static IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
+    {
+        for (int index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
+        {
+            var child = VisualTreeHelper.GetChild(root, index);
+            if (child is T value) yield return value;
+            foreach (var descendant in Descendants<T>(child)) yield return descendant;
+        }
+    }
     internal static int Run(string output)
     {
         var checks = new List<string>();
@@ -95,7 +104,68 @@ internal static class UiCheck
                     Check(dashboard.VisibleCard != null, "Solicitação real do monitor abre o novo aviso");
                     dashboard.Receive(Event("sample-one", "PostToolUse", "Bash"), false);
                     Check(dashboard.VisibleCard is null, "Resposta à solicitação fecha o aviso antes do prazo");
+                    dashboard.PopupToggle.IsChecked = false;
+                    dashboard.Receive(Event("sample-one", "PermissionRequest", "Bash"), false);
+                    var pendingState = ((SessionRow)dashboard.SessionsList.Items[0]).Session;
+                    foreach (var language in L.Languages)
+                    {
+                        dashboard.LanguageSelect.SelectedValue = language.Code;
+                        await dashboard.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                        Check(L.Current == language.Code && dashboard.Headline.Text == L.T("Headline") &&
+                            new ButtonAutomationPeer(dashboard.OpenCodeButton).GetName() == L.T("OpenCode"),
+                            "Painel muda de idioma sem reiniciar: " + language.Code);
+                        Check(Descendants<TextBlock>(dashboard.LanguageSelect).Any(text => text.IsVisible && text.Text == language.Name),
+                            "Seletor exibe o nome nativo do idioma: " + language.Code);
+                        Check(dashboard.TrayLabels[0] == L.T("TrayOpen") && dashboard.TrayLabels[4] == L.T("Exit") &&
+                            ((ComboBoxItem)dashboard.ReminderSelect.SelectedItem).Content.ToString() == L.T("Reminder120"),
+                            "Bandeja e opções de lembrete traduzidas: " + language.Code);
+                        var pendingRow = dashboard.SessionsList.Items.Cast<SessionRow>().Single(row => row.Session.Id == "sample-one");
+                        Check(pendingRow.Status == L.T("StatusPermission") && pendingState.Pending && !pendingState.Acknowledged,
+                            "Tradução preserva a solicitação pendente: " + language.Code);
+                        saved = Preferences.Load();
+                        Check(saved.Language == language.Code && !saved.Sound && !saved.Popup && saved.ReminderSeconds == 120,
+                            "Idioma é salvo sem alterar as demais preferências: " + language.Code);
+                        var root = (FrameworkElement)dashboard.Content;
+                        var pickerOrigin = dashboard.LanguageSelect.TranslatePoint(new Point(), root);
+                        var testOrigin = dashboard.TestButton.TranslatePoint(new Point(), dashboard.MainContent);
+                        Check(pickerOrigin.X >= 0 && pickerOrigin.X + dashboard.LanguageSelect.ActualWidth <= root.ActualWidth + 1 &&
+                            testOrigin.Y + dashboard.TestButton.ActualHeight <= dashboard.MainContent.ActualHeight + 1,
+                            "Seletor e ações cabem na janela mínima: " + language.Code);
+                        Capture(root, "idioma-" + language.Code + ".png");
+                        var preview = new AlertCard(pendingState, () => { }, () => { }, () => { });
+                        preview.Show();
+                        await dashboard.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                        Check(preview.AlertTitle.Text == L.T("StatusPermission") && preview.Countdown.Text == L.F("Seconds", 3),
+                            "Aviso usa o idioma selecionado: " + language.Code);
+                        Capture((FrameworkElement)preview.Content, "aviso-" + language.Code + ".png"); preview.Close();
+                    }
+                    Check(dashboard.LanguageSelect.Items.Count == 6 && new ComboBoxAutomationPeer(dashboard.LanguageSelect).GetName() == L.T("Language"),
+                        "Seletor de idioma possui seis opções e nome acessível");
+                    dashboard.LanguageSelect.IsDropDownOpen = true;
+                    await dashboard.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                    var languagePopup = (System.Windows.Controls.Primitives.Popup)dashboard.LanguageSelect.Template.FindName("PART_Popup", dashboard.LanguageSelect);
+                    Check(languagePopup.IsOpen, "Menu discreto de idiomas abre normalmente");
+                    dashboard.LanguageSelect.IsDropDownOpen = false;
+                    dashboard.LanguageSelect.SelectedValue = "en"; dashboard.PopupToggle.IsChecked = true;
+                    dashboard.TestAlert();
+                    card = dashboard.VisibleCard!; closed = new TaskCompletionSource(); watch.Restart();
+                    card.Closed += (_, _) => closed.TrySetResult();
+                    await Task.Delay(700); dashboard.LanguageSelect.SelectedValue = "de";
+                    Check(card.AlertTitle.Text == L.T("StatusPermission"), "Aviso já aberto acompanha a troca de idioma");
+                    await closed.Task.WaitAsync(TimeSpan.FromSeconds(4)); watch.Stop();
+                    Check(watch.Elapsed.TotalSeconds >= 2.7 && watch.Elapsed.TotalSeconds < 4.5,
+                        "Trocar o idioma não reinicia os três segundos do aviso");
+                    dashboard.LanguageSelect.SelectedValue = "fr";
                     dashboard.Close(); Check(!dashboard.IsVisible, "Fechar o painel o recolhe na bandeja");
+                    var reopened = new Dashboard(false, true) { ShowActivated = false };
+                    try
+                    {
+                        reopened.Show();
+                        await reopened.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                        Check(L.Current == "fr" && reopened.LanguageSelect.SelectedValue?.ToString() == "fr" && reopened.Headline.Text == L.T("Headline"),
+                            "Idioma escolhido é restaurado ao reabrir o aplicativo");
+                    }
+                    finally { reopened.Quit(); }
                     exit = 0;
                     File.WriteAllText(output, JsonSerializer.Serialize(new { success = true, checks, dismissalMilliseconds = watch.Elapsed.TotalMilliseconds }, Storage.Json));
                 }

@@ -19,9 +19,15 @@ internal sealed class Preferences
     public bool Sound { get; set; } = true;
     public bool Popup { get; set; } = true;
     public int ReminderSeconds { get; set; } = 60;
+    public string Language { get; set; } = L.DefaultLanguage;
     public static Preferences Load()
     {
-        try { return JsonSerializer.Deserialize<Preferences>(File.ReadAllText(Path.Combine(Storage.Root, "preferences.json"))) ?? new(); }
+        try
+        {
+            var prefs = JsonSerializer.Deserialize<Preferences>(File.ReadAllText(Path.Combine(Storage.Root, "preferences.json"))) ?? new();
+            prefs.Language = L.Normalize(prefs.Language);
+            return prefs;
+        }
         catch { return new(); }
     }
     public void Save() => Storage.Atomic(Path.Combine(Storage.Root, "preferences.json"), JsonSerializer.Serialize(this, Storage.Json));
@@ -30,12 +36,12 @@ internal sealed class Preferences
 internal sealed class SessionRow(SessionState session)
 {
     public SessionState Session { get; } = session;
-    public string Project => Session.Project;
+    public string Project => L.Project(Session);
     public string Folder => Session.Folder;
     public bool NeedsAttention => Session.Pending && !Session.Acknowledged;
-    public string Status => Session.Status + (Session.Acknowledged ? " · visto" : "");
+    public string Status => L.Status(Session.Status) + (Session.Acknowledged ? L.T("SeenSuffix") : "");
     public string AccessibilityLabel => Project + ", " + Status;
-    public string Time => Session.Last.ToLocalTime().ToString("HH:mm:ss");
+    public string Time => Session.Last.ToLocalTime().ToString("HH:mm:ss", L.Culture);
     public string StatusGlyph => Session.Status == "Trabalhando" ? "\uE9F5" : NeedsAttention ? "\uE946" : "\uE73E";
     public Brush StatusBrush => (Brush)new BrushConverter().ConvertFromString(
         SystemParameters.HighContrast ? SystemColors.WindowTextColor.ToString() :
@@ -48,6 +54,7 @@ public partial class Dashboard : Window
     readonly Preferences prefs = Preferences.Load();
     readonly ObservableCollection<SessionRow> rows = [];
     readonly Forms.NotifyIcon tray;
+    readonly Forms.ContextMenuStrip trayMenu = new();
     readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(500) };
     readonly bool diagnostics;
     bool quitting, paused, ready;
@@ -57,58 +64,79 @@ public partial class Dashboard : Window
     DateTimeOffset lastClean;
     internal bool IsPaused => paused;
     internal AlertCard? VisibleCard => card;
+    internal string[] TrayLabels => trayMenu.Items.Cast<Forms.ToolStripItem>().Select(item => item.Text ?? "").ToArray();
 
     internal Dashboard(bool trayOnly, bool diagnostics = false)
     {
         this.diagnostics = diagnostics;
+        L.Apply(prefs.Language);
         InitializeComponent(); UiTheme.ApplyAccessibility(Resources);
         SessionsList.ItemsSource = rows;
         SoundToggle.IsChecked = prefs.Sound; PopupToggle.IsChecked = prefs.Popup;
         int[] intervals = [0, 30, 60, 120];
         ReminderSelect.SelectedIndex = Math.Max(0, Array.IndexOf(intervals, prefs.ReminderSeconds));
-        var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add("Abrir Claude Alerta", null, (_, _) => Reveal());
-        menu.Items.Add("Testar aviso", null, (_, _) => TestAlert());
-        menu.Items.Add("Silenciar por 5 minutos", null, (_, _) => Snooze());
-        menu.Items.Add("Desativar integração", null, (_, _) => ChangeHooks(true));
-        menu.Items.Add("Sair", null, (_, _) => Quit());
+        LanguageSelect.ItemsSource = L.Languages;
+        LanguageSelect.SelectedValue = prefs.Language;
+        void AddMenu(string key, Action action) { var item = trayMenu.Items.Add(L.T(key), null, (_, _) => action()); item.Tag = key; }
+        AddMenu("TrayOpen", Reveal); AddMenu("TestAlert", TestAlert); AddMenu("Snooze", Snooze);
+        AddMenu("IntegrationDeactivate", () => ChangeHooks(true)); AddMenu("Exit", Quit);
         var appIcon = System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath!) ?? System.Drawing.SystemIcons.Information;
-        tray = new Forms.NotifyIcon { Icon = appIcon, Text = "Claude Alerta", Visible = !diagnostics, ContextMenuStrip = menu };
+        tray = new Forms.NotifyIcon { Icon = appIcon, Text = L.T("AppTitle"), Visible = !diagnostics, ContextMenuStrip = trayMenu };
         Icon = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(appIcon.Handle, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
         tray.DoubleClick += (_, _) => Dispatcher.Invoke(Reveal);
         Closing += OnClosing;
-        Closed += (_, _) => { timer.Stop(); CloseCard(); tray.Visible = false; tray.Dispose(); appIcon.Dispose(); };
+        Closed += (_, _) => { timer.Stop(); CloseCard(); tray.Visible = false; tray.Dispose(); trayMenu.Dispose(); appIcon.Dispose(); };
         StateChanged += (_, _) => { if (WindowState == WindowState.Minimized) Hide(); };
         ContentRendered += (_, _) => { if (trayOnly) Hide(); };
         SessionsList.SelectionChanged += (_, _) => UpdateAcknowledgement();
-        timer.Tick += (_, _) => Tick(); ready = true;
+        timer.Tick += (_, _) => Tick();
+        ApplyLanguage(); ready = true;
         if (!diagnostics) timer.Start();
-        RenderSessions(); RefreshStatus();
     }
     void OnClosing(object? sender, CancelEventArgs e) { if (!quitting) { e.Cancel = true; Hide(); } }
     internal void Quit() { quitting = true; Close(); if (!diagnostics) Application.Current.Shutdown(); }
     void Reveal() { Show(); WindowState = WindowState.Normal; Activate(); }
-    void SavePrefs() { try { prefs.Save(); } catch { FooterLabel.Text = "Não foi possível salvar as preferências."; } }
+    void SavePrefs() { try { prefs.Save(); } catch { FooterLabel.Text = L.T("PrefsSaveError"); } }
+    void ApplyLanguage()
+    {
+        bool wasReady = ready; ready = false;
+        try
+        {
+            L.Apply(prefs.Language);
+            Language = System.Windows.Markup.XmlLanguage.GetLanguage(L.Current);
+            LanguageSelect.SelectedValue = L.Current;
+            int reminderIndex = ReminderSelect.SelectedIndex;
+            ReminderSelect.SelectedIndex = -1; ReminderSelect.SelectedIndex = reminderIndex;
+            foreach (Forms.ToolStripItem item in trayMenu.Items) if (item.Tag is string key) item.Text = L.T(key);
+            RenderSessions(); RefreshStatus(); UpdateTrayText(); card?.RefreshLanguage();
+        }
+        finally { ready = wasReady; }
+    }
+    void UpdateTrayText() => tray.Text = L.T(state.Sessions.Values.Any(s => s.Pending && !s.Acknowledged) ? "TrayPending" : "AppTitle");
     void ChangeHooks(bool remove)
     {
         try
         {
             HookInstaller.Install(remove); RefreshStatus();
-            MessageBox.Show(this, remove ? "Integração desativada. Os outros hooks foram preservados." :
-                "Integração ativada. Abra uma nova conversa do Claude Code no VS Code para começar.",
-                "Claude Alerta", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, L.T(remove ? "IntegrationRemoved" : "IntegrationAdded"),
+                L.T("AppTitle"), MessageBoxButton.OK, MessageBoxImage.Information);
         }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "Não foi possível atualizar a integração", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        catch (Exception ex)
+        {
+            string message = ex is JsonException ? L.T("ConfigInvalid") :
+                ex is IOException or UnauthorizedAccessException && ex is not InvalidDataException ? L.T("ConfigWriteError") : ex.Message;
+            MessageBox.Show(this, message, L.T("IntegrationErrorTitle"), MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
     void RefreshStatus()
     {
         bool installed = HookInstaller.Installed();
-        MonitorLabel.Text = paused ? "Monitoramento pausado" : installed ? "Monitoramento ativo" : "Integração pendente";
+        MonitorLabel.Text = L.T(paused ? "MonitorPaused" : installed ? "MonitorActive" : "IntegrationPending");
         var brush = (Brush)FindResource(paused || !installed ? "Muted" : "Success");
         MonitorLabel.Foreground = brush; MonitorDot.Fill = brush;
-        PauseLabel.Text = paused ? "Retomar" : "Pausar"; PauseGlyph.Text = paused ? "\uE768" : "\uE769";
-        System.Windows.Automation.AutomationProperties.SetName(PauseButton, paused ? "Retomar alertas" : "Pausar alertas");
-        FooterLabel.Text = installed ? "Integração ativa · funciona localmente" : "Ative a integração para acompanhar o Claude Code";
+        PauseLabel.Text = L.T(paused ? "Resume" : "Pause"); PauseGlyph.Text = paused ? "\uE768" : "\uE769";
+        System.Windows.Automation.AutomationProperties.SetName(PauseButton, L.T(paused ? "ResumeAccessible" : "PauseAccessible"));
+        FooterLabel.Text = L.T(installed ? "FooterActive" : "FooterInactive");
         IntegrationButton.Visibility = installed ? Visibility.Collapsed : Visibility.Visible;
     }
     SessionState? Selected() => SessionsList.SelectedItem is SessionRow row ? row.Session :
@@ -121,10 +149,10 @@ public partial class Dashboard : Window
         rows.Clear();
         foreach (var s in state.Sessions.Values.OrderByDescending(s => s.Pending && !s.Acknowledged).ThenByDescending(s => s.Last)) rows.Add(new(s));
         SessionsList.SelectedItem = rows.FirstOrDefault(r => r.Session.Id == selected);
-        SessionCount.Text = rows.Count switch { 0 => "Nenhuma sessão ainda", 1 => "1 sessão", _ => $"{rows.Count} sessões" };
+        SessionCount.Text = rows.Count switch { 0 => L.T("CountNone"), 1 => L.T("CountOne"), _ => L.F("CountMany", rows.Count) };
         EmptyState.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         UpdateAcknowledgement();
-        if (!state.Sessions.Values.Any(s => s.Pending && !s.Acknowledged)) tray.Text = "Claude Alerta";
+        UpdateTrayText();
     }
     internal void Receive(Signal signal, bool sound = true)
     {
@@ -167,8 +195,8 @@ public partial class Dashboard : Window
                 RenderSessions();
             }
         }
-        catch (UnauthorizedAccessException) { FooterLabel.Text = "Sem acesso à pasta de eventos. Reinicie na sua conta Windows."; }
-        catch (IOException) { FooterLabel.Text = "Não foi possível ler os eventos. Tentando novamente…"; }
+        catch (UnauthorizedAccessException) { FooterLabel.Text = L.T("EventAccessError"); }
+        catch (IOException) { FooterLabel.Text = L.T("EventReadError"); }
         if (!paused && DateTimeOffset.UtcNow >= snoozedUntil && prefs.ReminderSeconds > 0)
         {
             var pending = state.Sessions.Values.Where(s => s.Pending && !s.Acknowledged && s.Status != "Resposta concluída" &&
@@ -180,7 +208,7 @@ public partial class Dashboard : Window
     {
         if (paused || DateTimeOffset.UtcNow < snoozedUntil) return;
         session.LastAlert = DateTimeOffset.UtcNow;
-        if (session.Id != "demo") { lastAlert = session; tray.Text = "Claude Alerta · ação pendente"; }
+        if (session.Id != "demo") { lastAlert = session; tray.Text = L.T("TrayPending"); }
         if (sound && prefs.Sound) SystemSounds.Exclamation.Play();
         if (!prefs.Popup) return;
         CloseCard();
@@ -193,12 +221,12 @@ public partial class Dashboard : Window
         if (session != null) session.Acknowledged = true;
         if (card?.SessionId == session?.Id) CloseCard(); RenderSessions();
     }
-    void Snooze() { snoozedUntil = DateTimeOffset.UtcNow.AddMinutes(5); CloseCard(); FooterLabel.Text = "Avisos silenciados por 5 minutos"; }
+    void Snooze() { snoozedUntil = DateTimeOffset.UtcNow.AddMinutes(5); CloseCard(); FooterLabel.Text = L.T("Snoozed"); }
     internal void TestAlert()
     {
-        if (paused || DateTimeOffset.UtcNow < snoozedUntil) { FooterLabel.Text = paused ? "Retome os alertas para testar o aviso." : "Avisos silenciados por 5 minutos."; return; }
-        if (!prefs.Popup) { FooterLabel.Text = "Ative o aviso de 3 segundos para ver o teste."; return; }
-        ShowAlert(new("demo") { Folder = "Projeto de exemplo", Status = "Autorização necessária", Pending = true, Last = DateTimeOffset.UtcNow }, !diagnostics);
+        if (paused || DateTimeOffset.UtcNow < snoozedUntil) { FooterLabel.Text = L.T(paused ? "TestWhilePaused" : "Snoozed"); return; }
+        if (!prefs.Popup) { FooterLabel.Text = L.T("TestPopupDisabled"); return; }
+        ShowAlert(new("demo") { Folder = L.T("ExampleProject"), Status = "Autorização necessária", Pending = true, Last = DateTimeOffset.UtcNow }, !diagnostics);
     }
     void OpenCode(SessionState? session)
     {
@@ -212,13 +240,18 @@ public partial class Dashboard : Window
                 string uri = "vscode://file/" + string.Join("/", session.Folder.Replace('\\', '/').Split('/').Select(Uri.EscapeDataString));
                 Process.Start(new ProcessStartInfo(uri) { UseShellExecute = true });
             }
-            else MessageBox.Show(this, "Abra o VS Code para acessar sua conversa do Claude Code.", "Claude Alerta");
+            else MessageBox.Show(this, L.T("CodeNotRunning"), L.T("AppTitle"));
         }
-        catch { MessageBox.Show(this, "Não foi possível abrir o VS Code. Abra-o pela barra de tarefas.", "Claude Alerta"); }
+        catch { MessageBox.Show(this, L.T("CodeOpenError"), L.T("AppTitle")); }
     }
     void Sound_Changed(object sender, RoutedEventArgs e) { if (ready) { prefs.Sound = SoundToggle.IsChecked == true; SavePrefs(); } }
     void Popup_Changed(object sender, RoutedEventArgs e) { if (ready) { prefs.Popup = PopupToggle.IsChecked == true; SavePrefs(); if (!prefs.Popup) CloseCard(); } }
     void Reminder_Changed(object sender, SelectionChangedEventArgs e) { if (ready && ReminderSelect.SelectedIndex >= 0) { prefs.ReminderSeconds = new[] { 0, 30, 60, 120 }[ReminderSelect.SelectedIndex]; SavePrefs(); } }
+    void Language_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!ready || LanguageSelect.SelectedValue is not string code) return;
+        prefs.Language = L.Normalize(code); ApplyLanguage(); SavePrefs();
+    }
     void Pause_Click(object sender, RoutedEventArgs e) { paused = !paused; if (paused) CloseCard(); RefreshStatus(); }
     void Test_Click(object sender, RoutedEventArgs e) => TestAlert();
     void OpenCode_Click(object sender, RoutedEventArgs e) => OpenCode(Selected());

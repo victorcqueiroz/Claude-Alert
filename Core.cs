@@ -119,13 +119,13 @@ internal static class HookInstaller
     internal static JsonObject Merge(JsonObject root, string exe, bool remove)
     {
         if (root["hooks"] is not null && root["hooks"] is not JsonObject)
-            throw new InvalidDataException("O campo hooks existente não é um objeto. Nenhuma alteração foi feita.");
+            throw new InvalidDataException(L.T("HooksInvalid"));
         var hooks = root["hooks"] as JsonObject ?? new JsonObject();
         root["hooks"] = hooks;
         foreach (var name in Events)
         {
             if (hooks[name] is not null && hooks[name] is not JsonArray)
-                throw new InvalidDataException($"O evento {name} existente não é uma lista.");
+                throw new InvalidDataException(L.F("EventInvalid", name));
             var entries = hooks[name] as JsonArray ?? new JsonArray();
             foreach (var entry in entries.ToArray())
             {
@@ -160,12 +160,12 @@ internal static class HookInstaller
         string? original = File.Exists(path) ? File.ReadAllText(path) : null;
         var root = original == null ? new JsonObject() : JsonNode.Parse(original,
             documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true })
-            as JsonObject ?? throw new InvalidDataException("Configuração Claude inválida.");
+            as JsonObject ?? throw new InvalidDataException(L.T("ConfigInvalid"));
         Merge(root, Environment.ProcessPath!, remove);
         if (original != null) File.Copy(path, path + ".claude-alerta-" + DateTime.Now.ToString("yyyyMMdd-HHmmss-ffff") + ".bak", false);
         // Refuse to overwrite a concurrent edit made since the file was read.
         if ((File.Exists(path) ? File.ReadAllText(path) : null) != original)
-            throw new IOException("As configurações mudaram durante a instalação. Tente novamente.");
+            throw new IOException(L.T("ConfigChanged"));
         Storage.Atomic(path, root.ToJsonString(Storage.Json));
         return path;
     }
