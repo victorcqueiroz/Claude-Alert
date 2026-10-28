@@ -21,7 +21,8 @@ internal sealed class QueueRow(SessionState session, Preferences prefs, PendingR
     public string Folder => Session.Folder;
     public string Project => prefs.ProjectName(Session);
     public string SessionLabel => L.F("SessionLabel", Session.Id[..Math.Min(12, Session.Id.Length)]);
-    public string Status => L.Status(Request?.Status ?? Activity?.Status ?? Session.Status);
+    public string SessionDetails => SessionLabel + " · " + Time;
+    public string Status => L.Status(Request?.Status ?? Activity?.Status ?? (Session.Pending ? Session.Requests[0].Status : Session.Status));
     public string AccessibilityLabel => Project + ", " + SessionLabel + ", " + Status;
     public string Time => Request?.DeferredUntil > DateTimeOffset.UtcNow ? L.F("DeferredUntil", Request.DeferredUntil.ToLocalTime().ToString("t", L.Culture)) :
         Session.Restored && Activity == null ? L.T("RestoredState") : (Activity?.At ?? Request?.Created ?? Session.Last).ToLocalTime().ToString("g", L.Culture);
@@ -41,6 +42,8 @@ public partial class Dashboard : Window
     AlertCard? card;
     string? cardRequest;
     DateTimeOffset lastClean, lastReminder;
+    string activePage = "sessions";
+    internal string ActivePage => activePage;
     internal bool IsPaused => prefs.Profile == "silent";
     internal AlertCard? VisibleCard => card;
     internal MonitorState Monitor => state;
@@ -56,6 +59,11 @@ public partial class Dashboard : Window
         this.diagnostics = diagnostics;
         prefs.Normalize(); bool resumed = prefs.ResumeIfDue(DateTimeOffset.UtcNow); L.Apply(prefs.Language);
         InitializeComponent(); UiTheme.ApplyAccessibility(Resources);
+        if (!diagnostics)
+        {
+            Height = Math.Min(Height, Math.Max(MinHeight, SystemParameters.WorkArea.Height - 24));
+            Width = Math.Min(Width, Math.Max(MinWidth, SystemParameters.WorkArea.Width - 24));
+        }
         if (trayOnly) ShowActivated = false;
         void AddMenu(string key, Action action) { var item = trayMenu.Items.Add(L.T(key), null, (_, _) => action()); item.Tag = key; }
         AddMenu("TrayOpen", Reveal); AddMenu("TestAlert", TestAlert); AddMenu("Snooze", Snooze);
@@ -69,7 +77,7 @@ public partial class Dashboard : Window
         StateChanged += (_, _) => { if (WindowState == WindowState.Minimized) Hide(); };
         ContentRendered += (_, _) => { if (trayOnly) Hide(); };
         LanguageSelect.ItemsSource = L.Languages;
-        ApplyLanguage(); ready = true;
+        ApplyLanguage(); ready = true; Navigate(activePage);
         if (resumed) SavePrefs();
         if (state.LoadFailed || prefs.LoadFailed) FeedbackLabel.Text = L.T("RestoreError");
         timer.Tick += (_, _) => Tick();
@@ -104,25 +112,60 @@ public partial class Dashboard : Window
     void RefreshStatus()
     {
         bool installed = HookInstaller.Installed();
-        MonitorLabel.Text = L.T(!installed ? "IntegrationPending" : prefs.Profile == "silent" ? "ProfileSilent" : prefs.Profile == "busy" ? "ProfileBusy" : "MonitorActive");
+        MonitorLabel.Text = L.T(installed ? "MonitorActive" : "IntegrationPending");
+        var monitorBrush = (System.Windows.Media.Brush)FindResource(installed ? "Success" : "Muted");
+        MonitorLabel.Foreground = monitorBrush; MonitorDot.Fill = monitorBrush;
         FooterLabel.Text = L.T("RetentionFooter");
         IntegrationButton.Content = L.T(installed ? "IntegrationRefresh" : "IntegrationActivate");
         tray.Text = L.T(state.Pending.Any() ? "TrayPending" : "AppTitle");
         LastEventLabel.Text = state.LastReceived == default ? L.T("NoEventYet") : L.F("LastEvent", state.LastReceived.ToLocalTime().ToString("g", L.Culture));
     }
     void RenderAll() { RenderSessions(); RenderProfile(); RenderProjects(); RefreshStatus(); }
+    internal void Navigate(string page)
+    {
+        if (page is not ("pending" or "sessions" or "history" or "projects" or "prefs")) return;
+        activePage = page;
+        QueuePage.Visibility = page is "pending" or "history" ? Visibility.Visible : Visibility.Collapsed;
+        OverviewPage.Visibility = page == "sessions" ? Visibility.Visible : Visibility.Collapsed;
+        ProjectsPage.Visibility = page == "projects" ? Visibility.Visible : Visibility.Collapsed;
+        PreferencesPage.Visibility = page == "prefs" ? Visibility.Visible : Visibility.Collapsed;
+        GlobalProfileButton.Visibility = page == "sessions" ? Visibility.Collapsed : Visibility.Visible;
+        bool before = rendering; rendering = true;
+        try
+        {
+            NavPending.IsChecked = page == "pending"; NavSessions.IsChecked = page == "sessions";
+            NavHistory.IsChecked = page == "history"; NavProjects.IsChecked = page == "projects"; NavPreferences.IsChecked = page == "prefs";
+        }
+        finally { rendering = before; }
+        FeedbackLabel.Text = ""; RenderAll();
+    }
+    void UpdatePageHeading()
+    {
+        int count = state.Pending.Count();
+        Headline.Text = activePage switch
+        {
+            "pending" => count == 0 ? L.T("NoPendingHeadline") : count == 1 ? L.T("OnePendingHeadline") : L.F("PendingHeadline", count),
+            "history" => L.T("HistoryNav"), "projects" => L.T("ProjectsTab"), "prefs" => L.T("Preferences"), _ => L.T("WorkingTab")
+        };
+        PageSubtitle.Text = L.T(activePage switch { "pending" => "QueueSubtitle", "history" => "HistorySubtitle", "projects" => "ProjectsSubtitle", "prefs" => "PreferencesSubtitle", _ => "SessionsSubtitle" });
+        QueueHelp.Text = L.T(activePage == "history" ? "HistoryHelp" : "PendingHelp");
+    }
     internal void RenderSessions()
     {
         string? selected = (SessionsList.SelectedItem as QueueRow)?.Key;
-        List<QueueRow> rows = QueueTabs.SelectedIndex switch
-        {
-            1 => state.Sessions.Values.Where(s => !s.Pending).OrderByDescending(s => s.Last).Select(s => new QueueRow(s, prefs)).ToList(),
-            2 => state.History.OrderByDescending(h => h.At).Select(h => new QueueRow(new(h.SessionId) { Folder = h.Folder, Last = h.At, Status = h.Status }, prefs, activity: h)).ToList(),
-            _ => state.Pending.OrderBy(p => p.Request.DeferredUntil > DateTimeOffset.UtcNow).ThenBy(p => p.Request.Created).Select(p => new QueueRow(p.Session, prefs, p.Request)).ToList()
-        };
+        List<QueueRow> rows = activePage == "history"
+            ? state.History.OrderByDescending(h => h.At).Select(h => new QueueRow(new(h.SessionId) { Folder = h.Folder, Last = h.At, Status = h.Status }, prefs, activity: h)).ToList()
+            : state.Pending.OrderBy(p => p.Request.DeferredUntil > DateTimeOffset.UtcNow).ThenBy(p => p.Request.Created).Select(p => new QueueRow(p.Session, prefs, p.Request)).ToList();
         SessionsList.ItemsSource = rows; SessionsList.SelectedItem = rows.FirstOrDefault(r => r.Key == selected) ?? rows.FirstOrDefault();
         EmptyState.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        int count = state.Pending.Count(); Headline.Text = count == 0 ? L.T("NoPendingHeadline") : count == 1 ? L.T("OnePendingHeadline") : L.F("PendingHeadline", count); UpdateDetail();
+        string? overviewSelection = (SessionOverview.SelectedItem as QueueRow)?.Session.Id;
+        var overview = state.Sessions.Values.OrderByDescending(s => s.Pending).ThenByDescending(s => s.Last).Select(s => new QueueRow(s, prefs)).ToArray();
+        SessionOverview.ItemsSource = overview;
+        SessionOverview.SelectedItem = overview.FirstOrDefault(r => r.Session.Id == overviewSelection);
+        OverviewEmpty.Visibility = overview.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        OverviewCount.Text = overview.Length switch { 0 => L.T("CountNone"), 1 => L.T("CountOne"), _ => L.F("CountMany", overview.Length) };
+        PendingNavCount.Text = state.Pending.Count().ToString(L.Culture);
+        UpdatePageHeading(); UpdateDetail();
     }
     QueueRow? SelectedRow => SessionsList.SelectedItem as QueueRow;
     void UpdateDetail()
@@ -139,14 +182,28 @@ public partial class Dashboard : Window
         rendering = true;
         try
         {
-            ProfileSelect.SelectedIndex = Array.IndexOf(profiles, prefs.Profile);
+            NormalProfile.IsChecked = prefs.Profile == "normal";
+            BusyProfile.IsChecked = prefs.Profile == "busy";
+            SilentProfile.IsChecked = prefs.Profile == "silent";
             var rules = prefs.Profiles[prefs.Profile];
-            ProfileAction.IsChecked = rules.Action; ProfileDone.IsChecked = rules.Done; ProfileError.IsChecked = rules.Error; ProfileSound.IsChecked = rules.Sound;
+            bool silent = prefs.Profile == "silent";
+            ProfileAction.IsChecked = !silent && rules.Action; ProfileDone.IsChecked = !silent && rules.Done;
+            ProfileError.IsChecked = !silent && rules.Error; ProfileSound.IsChecked = !silent && rules.Sound;
             foreach (var toggle in new[] { ProfileAction, ProfileDone, ProfileError, ProfileSound }) toggle.IsEnabled = prefs.Profile != "silent";
+            string profileName = L.T(prefs.Profile == "normal" ? "ProfileNormal" : prefs.Profile == "busy" ? "ProfileBusy" : "ProfileSilent");
+            ProfileRulesTitle.Text = L.F("ProfileRulesTitle", profileName);
+            ProfileRulesHelp.Text = L.T(silent ? "SilentRulesHelp" : "ProfileRulesHelp");
+            ProfileStateLabel.Text = L.F("ProfileActiveLabel", profileName);
+            GlobalProfileButton.Content = L.F("CurrentProfile", profileName);
+            BusyDescription.Text = L.T(prefs.Profiles["busy"].Action && prefs.Profiles["busy"].Error && !prefs.Profiles["busy"].Done ? "ProfileBusyDescription" : "ProfileCustomDescription");
+            System.Windows.Automation.AutomationProperties.SetHelpText(BusyProfile, BusyDescription.Text);
             ResumeSelect.SelectedIndex = Math.Max(0, Array.IndexOf(resumeMinutes, prefs.ResumeMinutes));
-            ResumeSelect.IsEnabled = prefs.Profile != "normal";
-            ResumeLabel.Text = prefs.Profile == "normal" ? L.T("NormalActive") : prefs.ResumeAt == default ? L.T("ResumeManual") : L.F("ResumeAt", prefs.ResumeAt.ToLocalTime().ToString("t", L.Culture));
-            SummaryLabel.Text = L.F("SummaryCounts", state.Pending.Count(), state.History.Count(h => h.Quiet && h.At >= prefs.ProfileSince && h.Status == "Resposta concluída"), state.History.Count(h => h.Quiet && h.At >= prefs.ProfileSince && h.Status == "Claude interrompido por erro"));
+            ResumeControls.Visibility = prefs.Profile == "normal" ? Visibility.Collapsed : Visibility.Visible;
+            ResumeLabel.Visibility = prefs.Profile == "normal" ? Visibility.Collapsed : Visibility.Visible;
+            ResumeLabel.Text = prefs.ResumeAt == default ? L.T("ResumeManual") : L.F("ResumeAt", prefs.ResumeAt.ToLocalTime().ToString("t", L.Culture));
+            int completed = state.History.Count(h => h.Quiet && h.At >= prefs.ProfileSince && h.Status == "Resposta concluída");
+            int errors = state.History.Count(h => h.Quiet && h.At >= prefs.ProfileSince && h.Status == "Claude interrompido por erro");
+            SummaryLabel.Text = completed == 0 && errors == 0 ? L.T("NoQuietEvents") : L.F("QuietSummary", completed, errors);
         }
         finally { rendering = false; }
     }
@@ -245,7 +302,7 @@ public partial class Dashboard : Window
         state.Defer(request, minutes, DateTimeOffset.UtcNow); CloseCard(); Persist(); RenderSessions(); FeedbackLabel.Text = L.F("DeferredMinutes", minutes);
     }
     void Snooze() { prefs.SetProfile("silent", 5, DateTimeOffset.UtcNow); CloseCard(); SavePrefs(); RenderAll(); FeedbackLabel.Text = L.T("Snoozed"); }
-    internal void ReturnToNormal() { prefs.Profile = "normal"; prefs.ResumeAt = default; SavePrefs(); RenderAll(); MainTabs.SelectedIndex = 1; FeedbackLabel.Text = L.T("ResumedSummary"); }
+    internal void ReturnToNormal() { prefs.Profile = "normal"; prefs.ResumeAt = default; SavePrefs(); Navigate("sessions"); FeedbackLabel.Text = L.T("ResumedSummary"); }
     internal void TestAlert()
     {
         if (!prefs.Popup) { FeedbackLabel.Text = L.T("TestPopupDisabled"); return; }
@@ -273,24 +330,31 @@ public partial class Dashboard : Window
     void Popup_Changed(object sender, RoutedEventArgs e) { if (ready) { prefs.Popup = PopupToggle.IsChecked == true; SavePrefs(); if (!prefs.Popup) CloseCard(); } }
     void Reminder_Changed(object sender, SelectionChangedEventArgs e) { if (ready && ReminderSelect.SelectedIndex >= 0) { prefs.ReminderSeconds = intervals[ReminderSelect.SelectedIndex]; SavePrefs(); } }
     void Language_Changed(object sender, SelectionChangedEventArgs e) { if (ready && LanguageSelect.SelectedValue is string code) { prefs.Language = L.Normalize(code); ApplyLanguage(); SavePrefs(); } }
-    void Preferences_Click(object sender, RoutedEventArgs e) => PreferencesPopup.IsOpen = !PreferencesPopup.IsOpen;
     void Test_Click(object sender, RoutedEventArgs e) => TestAlert();
     void OpenCode_Click(object sender, RoutedEventArgs e) => OpenCode(SelectedRow?.Session);
     void Defer_Click(object sender, RoutedEventArgs e) => Defer(SelectedRow?.Request, new[] { 5, 15, 30 }[Math.Max(0, DeferSelect.SelectedIndex)]);
     void Integration_Click(object sender, RoutedEventArgs e) => ChangeHooks(false);
     void Session_Selected(object sender, SelectionChangedEventArgs e) { if (ready) UpdateDetail(); }
     void Session_DoubleClick(object sender, MouseButtonEventArgs e) => OpenCode(SelectedRow?.Session);
-    void Queue_Changed(object sender, SelectionChangedEventArgs e) { if (ready && e.Source == QueueTabs) RenderSessions(); }
-    void Profile_Changed(object sender, SelectionChangedEventArgs e)
+    void Overview_DoubleClick(object sender, MouseButtonEventArgs e) => OpenCode((SessionOverview.SelectedItem as QueueRow)?.Session);
+    void Navigation_Checked(object sender, RoutedEventArgs e) { if (ready && !rendering && sender is RadioButton { Tag: string page, IsChecked: true }) Navigate(page); }
+    void Profiles_Click(object sender, RoutedEventArgs e)
     {
-        if (!ready || rendering || ProfileSelect.SelectedIndex < 0) return;
-        prefs.SetProfile(profiles[ProfileSelect.SelectedIndex], prefs.ResumeMinutes, DateTimeOffset.UtcNow); CloseCard(); SavePrefs(); RenderAll();
+        Navigate("sessions");
+        var target = prefs.Profile == "normal" ? NormalProfile : prefs.Profile == "busy" ? BusyProfile : SilentProfile;
+        target.BringIntoView(); target.Focus();
+    }
+    void History_Click(object sender, RoutedEventArgs e) => Navigate("history");
+    void Profile_Checked(object sender, RoutedEventArgs e)
+    {
+        if (!ready || rendering || sender is not RadioButton { Tag: string profile, IsChecked: true } || !profiles.Contains(profile) || prefs.Profile == profile) return;
+        prefs.SetProfile(profile, prefs.ResumeMinutes, DateTimeOffset.UtcNow); CloseCard(); SavePrefs(); RenderAll();
     }
     void ProfileRule_Changed(object sender, RoutedEventArgs e)
     {
         if (!ready || rendering) return;
         var rules = prefs.Profiles[prefs.Profile]; rules.Action = ProfileAction.IsChecked == true; rules.Done = ProfileDone.IsChecked == true;
-        rules.Error = ProfileError.IsChecked == true; rules.Sound = ProfileSound.IsChecked == true; CloseCard(); SavePrefs();
+        rules.Error = ProfileError.IsChecked == true; rules.Sound = ProfileSound.IsChecked == true; CloseCard(); SavePrefs(); RenderProfile();
     }
     void Resume_Changed(object sender, SelectionChangedEventArgs e)
     {

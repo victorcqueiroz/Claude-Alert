@@ -4,15 +4,15 @@
 
 Aplicativo local para **Windows 10/11 x64**, feito em C# / .NET 10 e WPF. Acompanha sessões locais do Claude Code, inclusive dentro do VS Code, e avisa sobre perguntas, autorizações, respostas concluídas e erros. O aviso dura **três segundos**, se recolhe automaticamente e não solicita o foco da digitação.
 
-**Versão 1.3.0 · tema Claro · seis idiomas.** Em português, o aplicativo se chama Claude Alerta. Consulte o [histórico de versões](CHANGELOG.md).
+**Versão 1.4.0 · tema Claro · seis idiomas.** Em português, o aplicativo se chama Claude Alerta. Consulte o [histórico de versões](CHANGELOG.md) e a [organização visual aprovada](design/NAVEGACAO.md).
 
-![Fila de pendências no tema Claro](docs/images/painel-claro.png)
+![Sessões e perfis com personalização aberta no tema Claro](docs/images/painel-claro.png)
 
 *Capturas da aplicação real com dados fictícios de teste.*
 
 ## Baixar e executar
 
-1. Abra a [versão mais recente](https://github.com/victorcqueiroz/Claude-Alert/releases/latest) e baixe `ClaudeAlert-1.3.0-win-x64.zip`.
+1. Abra a [versão mais recente](https://github.com/victorcqueiroz/Claude-Alert/releases/latest) e baixe `ClaudeAlert-1.4.0-win-x64.zip`.
 2. Extraia **todos os arquivos** para uma pasta definitiva e abra `ClaudeAlerta.exe`.
 3. Abra **Preferências → Ativar integração**. Se já estiver configurada, a ação aparece como **Atualizar integração**.
 4. Abra uma nova conversa do Claude Code no VS Code para carregar a configuração.
@@ -23,16 +23,31 @@ O pacote inclui o runtime .NET; não é necessário instalar o SDK para usar. Re
 O arquivo `SHA256SUMS.txt` da publicação permite conferir o ZIP:
 
 ```powershell
-Get-FileHash .\ClaudeAlert-1.3.0-win-x64.zip -Algorithm SHA256
+Get-FileHash .\ClaudeAlert-1.4.0-win-x64.zip -Algorithm SHA256
 ```
 
 Mantenha os arquivos do pacote juntos. Os hooks guardam o caminho do executável; se mudar de pasta, atualize a integração na nova localização.
 
-## Atenção: o que ainda precisa de você
+## Navegação lateral
 
-- **Pendentes:** cada solicitação tem sua própria linha, projeto, ID de sessão e ferramenta, quando disponível. Perguntas paralelas na mesma sessão permanecem separadas.
-- **Sessões:** mostra as sessões sem solicitações pendentes e o último estado conhecido.
-- **Recentes:** reúne respostas confirmadas, respostas concluídas, erros e encerramentos de sessão.
+O painel abre em **Sessões**. Um único menu à esquerda dá acesso às cinco áreas:
+
+| Área | Conteúdo |
+| --- | --- |
+| **Pendências** | Fila de solicitações, contexto e adiamento individual. O número no menu indica quantas ainda aguardam ação. |
+| **Sessões** | Todas as sessões acompanhadas, resumo da ausência e perfis de avisos. |
+| **Histórico** | Respostas confirmadas, respostas concluídas, erros e encerramentos das últimas 24 horas. |
+| **Projetos** | Apelidos, fixação, silêncio e regras individuais. |
+| **Preferências** | Som, popup, lembretes, teste de aviso e diagnóstico da integração. |
+
+Os controles têm foco visível e semântica nativa para navegação por teclado. Em janelas menores, Sessões e Preferências usam rolagem vertical. Listas extensas de sessões têm altura limitada para manter os perfis acessíveis.
+
+## Pendências: o que ainda precisa de você
+
+Cada solicitação tem sua própria linha, projeto, ID de sessão e ferramenta, quando disponível. Perguntas paralelas na mesma sessão permanecem separadas.
+
+![Fila de pendências com contexto e adiamento](docs/images/pendencias-claro.png)
+
 - **Adiar lembrete:** escolha 5, 15 ou 30 minutos para a solicitação selecionada. O aviso também oferece **Adiar 15 min**.
 - **Abrir projeto no VS Code:** tenta restaurar a janela correspondente ao projeto ou abrir sua pasta. Não seleciona uma conversa específica.
 
@@ -42,7 +57,13 @@ As pendências e os adiamentos sobrevivem ao reinício. Estados recuperados exib
 
 O antigo botão **Já vi** foi substituído pelo adiamento explícito, para que uma solicitação ainda sem resposta não perca seus lembretes indefinidamente.
 
-## Ritmo: escolher quando ser interrompido
+## Sessões: perfis e atividade
+
+**Suas sessões** aparece primeiro, incluindo sessões trabalhando e aguardando resposta. Logo abaixo ficam os três cartões de **Perfil de avisos**. Clique em qualquer parte do cartão para selecionar; o perfil ativo recebe destaque e a indicação **Em uso**.
+
+As opções em **Avisos do perfil…** ficam sempre abertas e mudam imediatamente com a seleção. Não há menu nem expansor para personalizar autorizações/perguntas, conclusões, erros e som.
+
+![Perfil Ocupado e suas opções visíveis](docs/images/perfil-ocupado.png)
 
 | Perfil | Comportamento padrão |
 | --- | --- |
@@ -52,7 +73,9 @@ O antigo botão **Já vi** foi substituído pelo adiamento explícito, para que 
 
 Em Normal e Ocupado, você pode escolher as categorias permitidas e o som do perfil. O som também precisa estar ligado nas preferências globais. O modo Silencioso sempre bloqueia avisos, mesmo que um projeto esteja configurado para permiti-los.
 
-Escolha retomada **manual**, em **15 minutos**, **30 minutos** ou **1 hora**. O prazo fica salvo e é respeitado após reiniciar o programa. **Voltei, mostrar resumo** retoma Normal e mostra quantas solicitações aguardam ação, quantas respostas terminaram sem aviso e quantos erros ficaram silenciosos durante sua ausência. Alternar entre Ocupado e Silencioso preserva esse período. A retomada automática apresenta o mesmo resumo na aba Ritmo, sem abrir o painel à força.
+Em Ocupado ou Silencioso, escolha retomada **manual**, em **15 minutos**, **30 minutos** ou **1 hora**. O prazo fica salvo e é respeitado após reiniciar o programa. **Voltei** retoma Normal na tela Sessões, onde o resumo indica respostas concluídas e erros que ficaram sem aviso durante sua ausência. As solicitações continuam em Pendências. Alternar entre Ocupado e Silencioso preserva esse período; a retomada automática não abre o painel à força.
+
+Em outras áreas, o atalho **Perfil: …** leva diretamente aos cartões em Sessões. A opção **Ver histórico** abre a atividade detalhada.
 
 No menu da bandeja, **Silenciar por 5 minutos** aplica Silencioso com retorno automático. O painel pode ser aberto com duplo clique no ícone.
 
@@ -87,13 +110,13 @@ As regras de projeto **restringem** o perfil atual: um aviso precisa ser permiti
 
 ## Verificar a integração
 
-**Verificar integração** confere o executável, a presença dos handlers esperados na configuração do usuário e a possibilidade de escrever na fila local. O painel mostra separadamente a data do **último evento recebido**.
+Em **Preferências**, **Verificar integração** confere o executável, a presença dos handlers esperados na configuração do usuário e a possibilidade de escrever na fila local. A mesma área mostra separadamente a data do **último evento recebido**.
 
 Uma configuração válida não comprova a entrega de novos eventos. O fluxo completo só é confirmado quando um evento real do Claude chega. Ausência de eventos não é tratada como travamento ou desconexão; uma resposta longa pode não produzir eventos durante algum tempo. Políticas, configurações de projeto e `disableAllHooks` podem afetar a execução dos hooks.
 
 ## Idiomas
 
-No canto inferior direito, o seletor discreto oferece **Português, English, Español, Deutsch, Français e 简体中文**. A troca é imediata, inclui as três abas, os avisos e a bandeja, e fica salva para a próxima abertura. O idioma não altera o estado das pendências nem reinicia o prazo de um aviso aberto.
+No canto inferior direito, o seletor discreto oferece **Português, English, Español, Deutsch, Français e 简体中文**. A troca é imediata, inclui toda a navegação, os cartões, as opções dos perfis, os avisos e a bandeja, e fica salva para a próxima abertura. O idioma não altera o estado das pendências nem reinicia o prazo de um aviso aberto.
 
 Português é o padrão. As preferências da versão 1.2.0 preservam idioma, som, popup e intervalo de lembretes. Novas instalações começam com lembretes progressivos. Os catálogos ficam incorporados ao programa e não usam tradução pela rede.
 
@@ -148,7 +171,7 @@ cd Claude-Alert
 .\scripts\package.ps1 -SkipBuild
 ```
 
-A publicação fica em `artifacts/publish/win-x64/`; o ZIP e seu SHA-256 ficam em `artifacts/releases/1.3.0/`. Para usar outro SDK local, informe `-Dotnet C:\caminho\dotnet.exe` aos scripts de compilação, teste ou empacotamento.
+A publicação fica em `artifacts/publish/win-x64/`; o ZIP e seu SHA-256 ficam em `artifacts/releases/1.4.0/`. Para usar outro SDK local, informe `-Dotnet C:\caminho\dotnet.exe` aos scripts de compilação, teste ou empacotamento.
 
 Sem o script:
 
@@ -165,7 +188,7 @@ Program.cs               Inicialização, bandeja e entrada dos hooks
 Core.cs                  Armazenamento, filtragem e instalação dos hooks
 MonitorModel.cs          Solicitações independentes, histórico e persistência
 Preferences.cs           Perfis, regras por projeto e política de lembretes
-Dashboard.xaml/.cs       Atenção, Ritmo, Projetos e diagnóstico
+Dashboard.xaml/.cs       Navegação lateral, sessões, perfis e diagnóstico
 AlertCard.xaml(.cs)       Aviso com recolhimento em três segundos
 ClaroTheme.xaml          Tema Claro e estilos compartilhados
 Localization.cs          Aplicação e fallback de idiomas

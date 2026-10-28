@@ -1,5 +1,11 @@
 # Propostas visuais — Claro aprovado
 
+## Navegação atual — 1.4.0
+
+A direção atual é a [navegação lateral com sessões acima dos perfis e personalização aberta](NAVEGACAO.md). Essa revisão substitui a organização por abas da 1.3.0 e preserva a skin Claro escolhida anteriormente.
+
+O histórico abaixo registra as primeiras propostas de aparência.
+
 Aplicativo: Claude Alerta. O usuário aprovou **Claro**. A versão 1.1.0 aplica essa direção ao painel e ao aviso nativo, com os mesmos controles de monitoramento e duração de três segundos.
 
 ## Direções

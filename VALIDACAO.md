@@ -1,5 +1,20 @@
 # Validação — 28/10/2026
 
+## Versão 1.4.0 — navegação e perfis aprovados
+
+- Publicação Windows x64 com runtime incluído concluída, sem erros nem avisos. Nenhum pacote de terceiros foi adicionado.
+- **76 verificações do monitor e dos catálogos** aprovadas, incluindo compatibilidade com preferências anteriores, retenção, privacidade, correlação de eventos, políticas de avisos e integridade das traduções.
+- **118 verificações da interface WPF** aprovadas. A árvore real não contém `TabControl`; o menu lateral tem os cinco destinos, e a tela inicial é Sessões.
+- A geometria da janela confirma que Suas sessões precede os perfis. Os três cartões ficam expostos e a personalização inicia aberta, sem expansor. Clicar em cada perfil atualiza suas opções imediatamente, com nome e semântica de `RadioButton` acessíveis.
+- Personalização e perfil ativo persistem ao alternar cartões. Silencioso mostra os controles desligados e desativados; Voltei retoma Normal. O idioma e as configurações continuam sendo recuperados ao reabrir.
+- Com duas sessões de exemplo, a lista, os cartões e as regras cabem juntos na janela padrão. Alternar para Ocupado mantém a largura dos cartões e não cria rolagem nessa composição.
+- As cinco áreas foram renderizadas em todos os seis idiomas na janela mínima de 900 × 700 unidades lógicas. A rolagem alcança as regras abertas em cada idioma, sem alterar a ordem dos blocos.
+- Capturas reais comparadas à referência aprovada: menu lateral, superfícies claras, ações em azul, cartões selecionados, ordem das sessões e personalização aberta. A referência está em `design/referencia-sessoes-aprovada.png`; capturas reais, em `docs/images/`.
+- O aviso continuou sem solicitar ativação e se recolheu em cerca de **3,07 segundos**. A troca de idioma durante a exibição não reiniciou sua duração; uma confirmação correspondente fechou o aviso antes do prazo.
+- Resultados: `artifacts/tests/b105da3345f74aeeb25983165206d026/core/results.json` e `ui/results.json`. Evidências isoladas completas não são versionadas.
+
+Os testes usam eventos fictícios, o produtor real de hooks e renderização das próprias janelas. Não comprovam som audível, leitura por todos os leitores de tela, todas as combinações de DPI/monitores, sobreposição a jogos ou a entrega de eventos em cada instalação do Claude. Em janelas menores, o conteúdo de Sessões requer rolagem; os controles permanecem expostos e acessíveis.
+
 ## Versão 1.3.0 — Atenção, Ritmo e Projetos
 
 - Publicação Windows x64 com runtime incluído concluída, sem erros nem avisos na compilação final. A restauração oficial do NuGet foi concluída; não foram adicionados pacotes de terceiros.

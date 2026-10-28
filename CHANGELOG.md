@@ -1,5 +1,22 @@
 # Histórico de versões
 
+## 1.4.0 — 2026-10-28
+
+### Alterado
+
+- Navegação lateral única para Pendências, Sessões, Histórico, Projetos e Preferências, substituindo as duas fileiras de abas padrão.
+- Sessões como tela inicial, reunindo todas as sessões acompanhadas acima dos perfis.
+- Normal, Ocupado e Silencioso em cartões com seleção direta, destaque e indicação de perfil em uso.
+- Personalização sempre aberta, atualizada imediatamente ao escolher um perfil; Silencioso mantém as opções visíveis e desativadas.
+- Retomada e botão Voltei ao lado do perfil escolhido. O atalho Perfil nas demais áreas leva aos cartões em Sessões.
+- Preferências globais e diagnóstico em área própria; histórico com acesso direto pelo menu lateral.
+- Traduções dos seis idiomas, README, capturas reais e referência visual aprovada atualizados.
+
+### Compatibilidade
+
+- Mantém o tema Claro, o aviso de três segundos e o protocolo de hooks.
+- Preferências, pendências, adiamentos, histórico e regras de projeto 1.3.0 são preservados, sem migração do formato de dados.
+
 ## 1.3.0 — 2026-10-28
 
 ### Adicionado
