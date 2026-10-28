@@ -1,0 +1,109 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="Surface" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="Ground" Color="#F4F6F9" />
+    <SolidColorBrush x:Key="Ink" Color="#192638" />
+    <SolidColorBrush x:Key="Muted" Color="#586779" />
+    <SolidColorBrush x:Key="Line" Color="#DCE3EC" />
+    <SolidColorBrush x:Key="Accent" Color="#125FB5" />
+    <SolidColorBrush x:Key="AccentHover" Color="#0F5098" />
+    <SolidColorBrush x:Key="AccentPressed" Color="#0C427E" />
+    <SolidColorBrush x:Key="OnAccent" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="Tint" Color="#EAF2FF" />
+    <SolidColorBrush x:Key="Success" Color="#286247" />
+    <SolidColorBrush x:Key="Danger" Color="#A12626" />
+    <FontFamily x:Key="UiFont">Segoe UI Variable, Segoe UI</FontFamily>
+    <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+    <Style x:Key="FocusRing">
+        <Setter Property="Control.Template"><Setter.Value>
+            <ControlTemplate><Border BorderBrush="{DynamicResource Accent}" BorderThickness="2" CornerRadius="8" Margin="-3" /></ControlTemplate>
+        </Setter.Value></Setter>
+    </Style>
+    <Style TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource Ink}" /></Style>
+    <Style x:Key="SecondaryText" TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource Muted}" /><Setter Property="FontSize" Value="12" /></Style>
+    <Style x:Key="Glyph" TargetType="TextBlock"><Setter Property="FontFamily" Value="{StaticResource IconFont}" /><Setter Property="FontSize" Value="16" /><Setter Property="VerticalAlignment" Value="Center" /><Setter Property="Foreground" Value="{DynamicResource Accent}" /><Setter Property="Focusable" Value="False" /></Style>
+    <Style TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource Surface}" /><Setter Property="Foreground" Value="{DynamicResource Ink}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Line}" /><Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="15,10" /><Setter Property="MinHeight" Value="42" /><Setter Property="FontSize" Value="13" />
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}" /><Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="Cursor" Value="Hand" /><Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}" />
+        <Setter Property="Template"><Setter.Value>
+            <ControlTemplate TargetType="Button">
+                <Border x:Name="ButtonChrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ButtonChrome" Property="Background" Value="{DynamicResource Ground}" /></Trigger>
+                    <Trigger Property="IsPressed" Value="True"><Setter TargetName="ButtonChrome" Property="Background" Value="{DynamicResource Tint}" /></Trigger>
+                    <Trigger Property="IsEnabled" Value="False"><Setter TargetName="ButtonChrome" Property="Opacity" Value="0.5" /></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value></Setter>
+    </Style>
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Background" Value="{DynamicResource Accent}" /><Setter Property="Foreground" Value="{DynamicResource OnAccent}" /><Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+        <Setter Property="Template"><Setter.Value>
+            <ControlTemplate TargetType="Button">
+                <Border x:Name="PrimaryChrome" Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="PrimaryChrome" Property="Background" Value="{DynamicResource AccentHover}" /></Trigger>
+                    <Trigger Property="IsPressed" Value="True"><Setter TargetName="PrimaryChrome" Property="Background" Value="{DynamicResource AccentPressed}" /></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value></Setter>
+    </Style>
+    <Style x:Key="QuietButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="BorderThickness" Value="0" /><Setter Property="Background" Value="Transparent" /><Setter Property="Foreground" Value="{DynamicResource Muted}" />
+    </Style>
+    <Style x:Key="LinkButton" TargetType="Button" BasedOn="{StaticResource QuietButton}">
+        <Setter Property="Foreground" Value="{DynamicResource Accent}" /><Setter Property="Padding" Value="0,4" /><Setter Property="MinHeight" Value="30" />
+    </Style>
+    <Style x:Key="SettingToggle" TargetType="CheckBox">
+        <Setter Property="MinHeight" Value="50" /><Setter Property="Foreground" Value="{DynamicResource Ink}" /><Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}" />
+        <Setter Property="Template"><Setter.Value>
+            <ControlTemplate TargetType="CheckBox">
+                <Border Background="Transparent" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,0,1" Padding="0,10">
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="36" /></Grid.ColumnDefinitions>
+                        <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True" />
+                        <Border x:Name="Track" Grid.Column="1" Width="34" Height="20" Background="{DynamicResource Muted}" CornerRadius="10" VerticalAlignment="Center">
+                            <Ellipse x:Name="Knob" Width="12" Height="12" Margin="4,0,0,0" HorizontalAlignment="Left" Fill="{DynamicResource OnAccent}" />
+                        </Border>
+                    </Grid>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsChecked" Value="True"><Setter TargetName="Track" Property="Background" Value="{DynamicResource Accent}" /><Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" /><Setter TargetName="Knob" Property="Margin" Value="0,0,4,0" /></Trigger>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Track" Property="Opacity" Value="0.85" /></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate>
+        </Setter.Value></Setter>
+    </Style>
+    <Style TargetType="ComboBox">
+        <Setter Property="MinHeight" Value="38" /><Setter Property="FontSize" Value="13" /><Setter Property="Padding" Value="10,7" />
+        <Setter Property="Foreground" Value="{DynamicResource Ink}" /><Setter Property="Background" Value="{DynamicResource Surface}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Line}" /><Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}" />
+        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBox">
+            <Grid>
+                <ToggleButton x:Name="DropToggle" Focusable="False" ClickMode="Press" IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                    <ToggleButton.Template><ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="FieldChrome" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="7" Padding="10,7">
+                            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="16" /></Grid.ColumnDefinitions>
+                                <ContentPresenter Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource AncestorType=ComboBox}}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="&#xE70D;" Style="{StaticResource Glyph}" FontSize="10" Foreground="{DynamicResource Ink}" HorizontalAlignment="Right" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="FieldChrome" Property="BorderBrush" Value="{DynamicResource Accent}" /></Trigger></ControlTemplate.Triggers>
+                    </ControlTemplate></ToggleButton.Template>
+                </ToggleButton>
+                <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True" IsOpen="{TemplateBinding IsDropDownOpen}" Focusable="False">
+                    <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="7" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Margin="0,4,0,0" Padding="4">
+                        <ScrollViewer MaxHeight="220" CanContentScroll="True" KeyboardNavigation.DirectionalNavigation="Contained"><ItemsPresenter /></ScrollViewer>
+                    </Border>
+                </Popup>
+            </Grid>
+        </ControlTemplate></Setter.Value></Setter>
+    </Style>
+</ResourceDictionary>
